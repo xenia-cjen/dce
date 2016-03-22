@@ -1,0 +1,679 @@
+; ModuleID = 'z28.ll'
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+%struct._IO_FILE = type { i32, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, %struct._IO_marker*, %struct._IO_FILE*, i32, i32, i64, i16, i8, [1 x i8], i8*, i64, i8*, i8*, i8*, i8*, i64, i32, [20 x i8] }
+%struct._IO_marker = type { %struct._IO_marker*, %struct._IO_FILE*, i32 }
+%struct.FILE_POS = type { i8, i8, i16, i32 }
+%struct.__va_list_tag = type { i32, i32, i8*, i8* }
+
+@fp = internal global %struct._IO_FILE* null, align 8
+@.str = private unnamed_addr constant [42 x i8] c"-e argument appears twice in command line\00", align 1
+@no_fpos = external global %struct.FILE_POS*, align 8
+@.str.1 = private unnamed_addr constant [2 x i8] c"w\00", align 1
+@.str.2 = private unnamed_addr constant [26 x i8] c"cannot open error file %s\00", align 1
+@error_seen = internal global i32 0, align 4
+@block_top = internal global i32 0, align 4
+@print_block = internal global [20 x i32] zeroinitializer, align 16
+@mess_top = internal global i32 0, align 4
+@start_block = internal global [20 x i32] zeroinitializer, align 16
+@.str.3 = private unnamed_addr constant [34 x i8] c"too many levels of error messages\00", align 1
+@.str.4 = private unnamed_addr constant [20 x i8] c"assert failed in %s\00", align 1
+@.str.5 = private unnamed_addr constant [46 x i8] c"LeaveErrorBlock: no matching EnterErrorBlock!\00", align 1
+@.str.6 = private unnamed_addr constant [25 x i8] c"LeaveErrorBlock: commit!\00", align 1
+@stderr = external global %struct._IO_FILE*, align 8
+@AltErrorFormat = external global i32, align 4
+@message = internal global [20 x [512 x i8]] zeroinitializer, align 16
+@message_fnum = internal global [20 x i32] zeroinitializer, align 16
+@.str.7 = private unnamed_addr constant [34 x i8] c"CheckErrorBlocks: block_top != 0!\00", align 1
+@MsgCat = external global i8*, align 8
+@.str.8 = private unnamed_addr constant [23 x i8] c"%s internal error: %s\0A\00", align 1
+@.str.9 = private unnamed_addr constant [26 x i8] c"  %6s internal error: %s\0A\00", align 1
+@.str.10 = private unnamed_addr constant [21 x i8] c"%s: fatal error: %s\0A\00", align 1
+@.str.11 = private unnamed_addr constant [24 x i8] c"  %6s: fatal error: %s\0A\00", align 1
+@.str.12 = private unnamed_addr constant [8 x i8] c"%s: %s\0A\00", align 1
+@.str.13 = private unnamed_addr constant [11 x i8] c"  %6s: %s\0A\00", align 1
+@.str.14 = private unnamed_addr constant [24 x i8] c"too many error messages\00", align 1
+@.str.15 = private unnamed_addr constant [26 x i8] c"Error: invalid error type\00", align 1
+@PrintFileBanner.CurrentFileNum = internal global i32 -1, align 4
+@.str.16 = private unnamed_addr constant [9 x i8] c"lout%s:\0A\00", align 1
+
+; Function Attrs: nounwind uwtable
+define void @ErrorInit(i8* %str) #0 {
+  %1 = alloca i8*, align 8
+  store i8* %str, i8** %1, align 8
+  %2 = load %struct._IO_FILE*, %struct._IO_FILE** @fp, align 8
+  %3 = icmp ne %struct._IO_FILE* %2, null
+  br i1 %3, label %4, label %7
+
+; <label>:4                                       ; preds = %0
+  %5 = load %struct.FILE_POS*, %struct.FILE_POS** @no_fpos, align 8
+  %6 = call i8* (i32, i32, i8*, i32, %struct.FILE_POS*, ...) @Error(i32 28, i32 1, i8* getelementptr inbounds ([42 x i8], [42 x i8]* @.str, i32 0, i32 0), i32 1, %struct.FILE_POS* %5)
+  br label %7
+
+; <label>:7                                       ; preds = %4, %0
+  %8 = load i8*, i8** %1, align 8
+  %9 = call %struct._IO_FILE* @fopen(i8* %8, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i32 0, i32 0))
+  store %struct._IO_FILE* %9, %struct._IO_FILE** @fp, align 8
+  %10 = load %struct._IO_FILE*, %struct._IO_FILE** @fp, align 8
+  %11 = icmp eq %struct._IO_FILE* %10, null
+  br i1 %11, label %12, label %16
+
+; <label>:12                                      ; preds = %7
+  %13 = load %struct.FILE_POS*, %struct.FILE_POS** @no_fpos, align 8
+  %14 = load i8*, i8** %1, align 8
+  %15 = call i8* (i32, i32, i8*, i32, %struct.FILE_POS*, ...) @Error(i32 28, i32 2, i8* getelementptr inbounds ([26 x i8], [26 x i8]* @.str.2, i32 0, i32 0), i32 1, %struct.FILE_POS* %13, i8* %14)
+  br label %16
+
+; <label>:16                                      ; preds = %12, %7
+  ret void
+}
+
+; Function Attrs: nounwind uwtable
+define i8* @Error(i32 %set_num, i32 %msg_num, i8* %str, i32 %etype, %struct.FILE_POS* %pos, ...) #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i8*, align 8
+  %7 = alloca i32, align 4
+  %8 = alloca %struct.FILE_POS*, align 8
+  %ap = alloca [1 x %struct.__va_list_tag], align 16
+  %val = alloca [512 x i8], align 16
+  store i32 %set_num, i32* %4, align 4
+  store i32 %msg_num, i32* %5, align 4
+  store i8* %str, i8** %6, align 8
+  store i32 %etype, i32* %7, align 4
+  store %struct.FILE_POS* %pos, %struct.FILE_POS** %8, align 8
+  %9 = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %ap, i32 0, i32 0
+  %10 = bitcast %struct.__va_list_tag* %9 to i8*
+  call void @llvm.va_start(i8* %10)
+  %11 = getelementptr inbounds [512 x i8], [512 x i8]* %val, i32 0, i32 0
+  %12 = load i8*, i8** @MsgCat, align 8
+  %13 = icmp ne i8* %12, null
+  br i1 %13, label %14, label %20
+
+; <label>:14                                      ; preds = %0
+  %15 = load i8*, i8** @MsgCat, align 8
+  %16 = load i32, i32* %4, align 4
+  %17 = load i32, i32* %5, align 4
+  %18 = load i8*, i8** %6, align 8
+  %19 = call i8* @catgets(i8* %15, i32 %16, i32 %17, i8* %18) #2
+  br label %22
+
+; <label>:20                                      ; preds = %0
+  %21 = load i8*, i8** %6, align 8
+  br label %22
+
+; <label>:22                                      ; preds = %20, %14
+  %23 = phi i8* [ %19, %14 ], [ %21, %20 ]
+  %24 = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %ap, i32 0, i32 0
+  %25 = call i32 @vsprintf(i8* %11, i8* %23, %struct.__va_list_tag* %24) #2
+  %26 = load %struct._IO_FILE*, %struct._IO_FILE** @fp, align 8
+  %27 = icmp eq %struct._IO_FILE* %26, null
+  br i1 %27, label %28, label %30
+
+; <label>:28                                      ; preds = %22
+  %29 = load %struct._IO_FILE*, %struct._IO_FILE** @stderr, align 8
+  store %struct._IO_FILE* %29, %struct._IO_FILE** @fp, align 8
+  br label %30
+
+; <label>:30                                      ; preds = %28, %22
+  %31 = load i32, i32* %7, align 4
+  switch i32 %31, label %219 [
+    i32 0, label %32
+    i32 1, label %85
+    i32 2, label %138
+  ]
+
+; <label>:32                                      ; preds = %30
+  br label %33
+
+; <label>:33                                      ; preds = %36, %32
+  %34 = load i32, i32* @block_top, align 4
+  %35 = icmp sgt i32 %34, 0
+  br i1 %35, label %36, label %37
+
+; <label>:36                                      ; preds = %33
+  call void @LeaveErrorBlock(i32 1)
+  br label %33
+
+; <label>:37                                      ; preds = %33
+  %38 = load i32, i32* @AltErrorFormat, align 4
+  %39 = icmp ne i32 %38, 0
+  br i1 %39, label %40, label %54
+
+; <label>:40                                      ; preds = %37
+  %41 = load %struct._IO_FILE*, %struct._IO_FILE** @fp, align 8
+  %42 = load i8*, i8** @MsgCat, align 8
+  %43 = icmp ne i8* %42, null
+  br i1 %43, label %44, label %47
+
+; <label>:44                                      ; preds = %40
+  %45 = load i8*, i8** @MsgCat, align 8
+  %46 = call i8* @catgets(i8* %45, i32 28, i32 7, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str.8, i32 0, i32 0)) #2
+  br label %48
+
+; <label>:47                                      ; preds = %40
+  br label %48
+
+; <label>:48                                      ; preds = %47, %44
+  %49 = phi i8* [ %46, %44 ], [ getelementptr inbounds ([23 x i8], [23 x i8]* @.str.8, i32 0, i32 0), %47 ]
+  %50 = load %struct.FILE_POS*, %struct.FILE_POS** %8, align 8
+  %51 = call i8* @EchoAltFilePos(%struct.FILE_POS* %50)
+  %52 = getelementptr inbounds [512 x i8], [512 x i8]* %val, i32 0, i32 0
+  %53 = call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %41, i8* %49, i8* %51, i8* %52)
+  br label %84
+
+; <label>:54                                      ; preds = %37
+  %55 = load %struct.FILE_POS*, %struct.FILE_POS** %8, align 8
+  %56 = getelementptr inbounds %struct.FILE_POS, %struct.FILE_POS* %55, i32 0, i32 2
+  %57 = load i16, i16* %56, align 2
+  %58 = zext i16 %57 to i32
+  %59 = bitcast i32* %1 to i8*
+  call void @llvm.lifetime.start(i64 4, i8* %59)
+  store i32 %58, i32* %1, align 4
+  %60 = load i32, i32* %1, align 4
+  %61 = load i32, i32* @PrintFileBanner.CurrentFileNum, align 4
+  %62 = icmp ne i32 %60, %61
+  br i1 %62, label %63, label %PrintFileBanner.exit2
+
+; <label>:63                                      ; preds = %54
+  %64 = load %struct._IO_FILE*, %struct._IO_FILE** @fp, align 8
+  %65 = load i32, i32* %1, align 4
+  %66 = trunc i32 %65 to i16
+  %67 = call i8* @EchoFileSource(i16 zeroext %66) #2
+  %68 = call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %64, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.16, i32 0, i32 0), i8* %67) #2
+  %69 = load i32, i32* %1, align 4
+  store i32 %69, i32* @PrintFileBanner.CurrentFileNum, align 4
+  br label %PrintFileBanner.exit2
+
+PrintFileBanner.exit2:                            ; preds = %54, %63
+  %70 = bitcast i32* %1 to i8*
+  call void @llvm.lifetime.end(i64 4, i8* %70)
+  %71 = load %struct._IO_FILE*, %struct._IO_FILE** @fp, align 8
+  %72 = load i8*, i8** @MsgCat, align 8
+  %73 = icmp ne i8* %72, null
+  br i1 %73, label %74, label %77
+
+; <label>:74                                      ; preds = %PrintFileBanner.exit2
+  %75 = load i8*, i8** @MsgCat, align 8
+  %76 = call i8* @catgets(i8* %75, i32 28, i32 4, i8* getelementptr inbounds ([26 x i8], [26 x i8]* @.str.9, i32 0, i32 0)) #2
+  br label %78
+
+; <label>:77                                      ; preds = %PrintFileBanner.exit2
+  br label %78
+
+; <label>:78                                      ; preds = %77, %74
+  %79 = phi i8* [ %76, %74 ], [ getelementptr inbounds ([26 x i8], [26 x i8]* @.str.9, i32 0, i32 0), %77 ]
+  %80 = load %struct.FILE_POS*, %struct.FILE_POS** %8, align 8
+  %81 = call i8* @EchoFileLine(%struct.FILE_POS* %80)
+  %82 = getelementptr inbounds [512 x i8], [512 x i8]* %val, i32 0, i32 0
+  %83 = call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %71, i8* %79, i8* %81, i8* %82)
+  br label %84
+
+; <label>:84                                      ; preds = %78, %48
+  call void @exit(i32 1) #5
+  unreachable
+
+; <label>:85                                      ; preds = %30
+  br label %86
+
+; <label>:86                                      ; preds = %89, %85
+  %87 = load i32, i32* @block_top, align 4
+  %88 = icmp sgt i32 %87, 0
+  br i1 %88, label %89, label %90
+
+; <label>:89                                      ; preds = %86
+  call void @LeaveErrorBlock(i32 1)
+  br label %86
+
+; <label>:90                                      ; preds = %86
+  %91 = load i32, i32* @AltErrorFormat, align 4
+  %92 = icmp ne i32 %91, 0
+  br i1 %92, label %93, label %107
+
+; <label>:93                                      ; preds = %90
+  %94 = load %struct._IO_FILE*, %struct._IO_FILE** @fp, align 8
+  %95 = load i8*, i8** @MsgCat, align 8
+  %96 = icmp ne i8* %95, null
+  br i1 %96, label %97, label %100
+
+; <label>:97                                      ; preds = %93
+  %98 = load i8*, i8** @MsgCat, align 8
+  %99 = call i8* @catgets(i8* %98, i32 28, i32 8, i8* getelementptr inbounds ([21 x i8], [21 x i8]* @.str.10, i32 0, i32 0)) #2
+  br label %101
+
+; <label>:100                                     ; preds = %93
+  br label %101
+
+; <label>:101                                     ; preds = %100, %97
+  %102 = phi i8* [ %99, %97 ], [ getelementptr inbounds ([21 x i8], [21 x i8]* @.str.10, i32 0, i32 0), %100 ]
+  %103 = load %struct.FILE_POS*, %struct.FILE_POS** %8, align 8
+  %104 = call i8* @EchoAltFilePos(%struct.FILE_POS* %103)
+  %105 = getelementptr inbounds [512 x i8], [512 x i8]* %val, i32 0, i32 0
+  %106 = call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %94, i8* %102, i8* %104, i8* %105)
+  br label %137
+
+; <label>:107                                     ; preds = %90
+  %108 = load %struct.FILE_POS*, %struct.FILE_POS** %8, align 8
+  %109 = getelementptr inbounds %struct.FILE_POS, %struct.FILE_POS* %108, i32 0, i32 2
+  %110 = load i16, i16* %109, align 2
+  %111 = zext i16 %110 to i32
+  %112 = bitcast i32* %2 to i8*
+  call void @llvm.lifetime.start(i64 4, i8* %112)
+  store i32 %111, i32* %2, align 4
+  %113 = load i32, i32* %2, align 4
+  %114 = load i32, i32* @PrintFileBanner.CurrentFileNum, align 4
+  %115 = icmp ne i32 %113, %114
+  br i1 %115, label %116, label %PrintFileBanner.exit1
+
+; <label>:116                                     ; preds = %107
+  %117 = load %struct._IO_FILE*, %struct._IO_FILE** @fp, align 8
+  %118 = load i32, i32* %2, align 4
+  %119 = trunc i32 %118 to i16
+  %120 = call i8* @EchoFileSource(i16 zeroext %119) #2
+  %121 = call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %117, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.16, i32 0, i32 0), i8* %120) #2
+  %122 = load i32, i32* %2, align 4
+  store i32 %122, i32* @PrintFileBanner.CurrentFileNum, align 4
+  br label %PrintFileBanner.exit1
+
+PrintFileBanner.exit1:                            ; preds = %107, %116
+  %123 = bitcast i32* %2 to i8*
+  call void @llvm.lifetime.end(i64 4, i8* %123)
+  %124 = load %struct._IO_FILE*, %struct._IO_FILE** @fp, align 8
+  %125 = load i8*, i8** @MsgCat, align 8
+  %126 = icmp ne i8* %125, null
+  br i1 %126, label %127, label %130
+
+; <label>:127                                     ; preds = %PrintFileBanner.exit1
+  %128 = load i8*, i8** @MsgCat, align 8
+  %129 = call i8* @catgets(i8* %128, i32 28, i32 5, i8* getelementptr inbounds ([24 x i8], [24 x i8]* @.str.11, i32 0, i32 0)) #2
+  br label %131
+
+; <label>:130                                     ; preds = %PrintFileBanner.exit1
+  br label %131
+
+; <label>:131                                     ; preds = %130, %127
+  %132 = phi i8* [ %129, %127 ], [ getelementptr inbounds ([24 x i8], [24 x i8]* @.str.11, i32 0, i32 0), %130 ]
+  %133 = load %struct.FILE_POS*, %struct.FILE_POS** %8, align 8
+  %134 = call i8* @EchoFileLine(%struct.FILE_POS* %133)
+  %135 = getelementptr inbounds [512 x i8], [512 x i8]* %val, i32 0, i32 0
+  %136 = call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %124, i8* %132, i8* %134, i8* %135)
+  br label %137
+
+; <label>:137                                     ; preds = %131, %101
+  call void @exit(i32 1) #5
+  unreachable
+
+; <label>:138                                     ; preds = %30
+  %139 = load i32, i32* @block_top, align 4
+  %140 = icmp eq i32 %139, 0
+  br i1 %140, label %148, label %141
+
+; <label>:141                                     ; preds = %138
+  %142 = load i32, i32* @block_top, align 4
+  %143 = sub nsw i32 %142, 1
+  %144 = sext i32 %143 to i64
+  %145 = getelementptr inbounds [20 x i32], [20 x i32]* @print_block, i32 0, i64 %144
+  %146 = load i32, i32* %145, align 4
+  %147 = icmp ne i32 %146, 0
+  br i1 %147, label %148, label %180
+
+; <label>:148                                     ; preds = %141, %138
+  %149 = load i32, i32* @AltErrorFormat, align 4
+  %150 = icmp ne i32 %149, 0
+  br i1 %150, label %151, label %157
+
+; <label>:151                                     ; preds = %148
+  %152 = load %struct._IO_FILE*, %struct._IO_FILE** @fp, align 8
+  %153 = load %struct.FILE_POS*, %struct.FILE_POS** %8, align 8
+  %154 = call i8* @EchoAltFilePos(%struct.FILE_POS* %153)
+  %155 = getelementptr inbounds [512 x i8], [512 x i8]* %val, i32 0, i32 0
+  %156 = call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %152, i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.12, i32 0, i32 0), i8* %154, i8* %155)
+  br label %179
+
+; <label>:157                                     ; preds = %148
+  %158 = load %struct.FILE_POS*, %struct.FILE_POS** %8, align 8
+  %159 = getelementptr inbounds %struct.FILE_POS, %struct.FILE_POS* %158, i32 0, i32 2
+  %160 = load i16, i16* %159, align 2
+  %161 = zext i16 %160 to i32
+  %162 = bitcast i32* %3 to i8*
+  call void @llvm.lifetime.start(i64 4, i8* %162)
+  store i32 %161, i32* %3, align 4
+  %163 = load i32, i32* %3, align 4
+  %164 = load i32, i32* @PrintFileBanner.CurrentFileNum, align 4
+  %165 = icmp ne i32 %163, %164
+  br i1 %165, label %166, label %PrintFileBanner.exit
+
+; <label>:166                                     ; preds = %157
+  %167 = load %struct._IO_FILE*, %struct._IO_FILE** @fp, align 8
+  %168 = load i32, i32* %3, align 4
+  %169 = trunc i32 %168 to i16
+  %170 = call i8* @EchoFileSource(i16 zeroext %169) #2
+  %171 = call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %167, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.16, i32 0, i32 0), i8* %170) #2
+  %172 = load i32, i32* %3, align 4
+  store i32 %172, i32* @PrintFileBanner.CurrentFileNum, align 4
+  br label %PrintFileBanner.exit
+
+PrintFileBanner.exit:                             ; preds = %157, %166
+  %173 = bitcast i32* %3 to i8*
+  call void @llvm.lifetime.end(i64 4, i8* %173)
+  %174 = load %struct._IO_FILE*, %struct._IO_FILE** @fp, align 8
+  %175 = load %struct.FILE_POS*, %struct.FILE_POS** %8, align 8
+  %176 = call i8* @EchoFileLine(%struct.FILE_POS* %175)
+  %177 = getelementptr inbounds [512 x i8], [512 x i8]* %val, i32 0, i32 0
+  %178 = call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %174, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str.13, i32 0, i32 0), i8* %176, i8* %177)
+  br label %179
+
+; <label>:179                                     ; preds = %PrintFileBanner.exit, %151
+  br label %218
+
+; <label>:180                                     ; preds = %141
+  %181 = load i32, i32* @mess_top, align 4
+  %182 = icmp slt i32 %181, 20
+  br i1 %182, label %183, label %214
+
+; <label>:183                                     ; preds = %180
+  %184 = load i32, i32* @AltErrorFormat, align 4
+  %185 = icmp ne i32 %184, 0
+  br i1 %185, label %186, label %196
+
+; <label>:186                                     ; preds = %183
+  %187 = load i32, i32* @mess_top, align 4
+  %188 = add nsw i32 %187, 1
+  store i32 %188, i32* @mess_top, align 4
+  %189 = sext i32 %187 to i64
+  %190 = getelementptr inbounds [20 x [512 x i8]], [20 x [512 x i8]]* @message, i32 0, i64 %189
+  %191 = getelementptr inbounds [512 x i8], [512 x i8]* %190, i32 0, i32 0
+  %192 = load %struct.FILE_POS*, %struct.FILE_POS** %8, align 8
+  %193 = call i8* @EchoAltFilePos(%struct.FILE_POS* %192)
+  %194 = getelementptr inbounds [512 x i8], [512 x i8]* %val, i32 0, i32 0
+  %195 = call i32 (i8*, i8*, ...) @sprintf(i8* %191, i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.12, i32 0, i32 0), i8* %193, i8* %194) #2
+  br label %213
+
+; <label>:196                                     ; preds = %183
+  %197 = load %struct.FILE_POS*, %struct.FILE_POS** %8, align 8
+  %198 = getelementptr inbounds %struct.FILE_POS, %struct.FILE_POS* %197, i32 0, i32 2
+  %199 = load i16, i16* %198, align 2
+  %200 = zext i16 %199 to i32
+  %201 = load i32, i32* @mess_top, align 4
+  %202 = sext i32 %201 to i64
+  %203 = getelementptr inbounds [20 x i32], [20 x i32]* @message_fnum, i32 0, i64 %202
+  store i32 %200, i32* %203, align 4
+  %204 = load i32, i32* @mess_top, align 4
+  %205 = add nsw i32 %204, 1
+  store i32 %205, i32* @mess_top, align 4
+  %206 = sext i32 %204 to i64
+  %207 = getelementptr inbounds [20 x [512 x i8]], [20 x [512 x i8]]* @message, i32 0, i64 %206
+  %208 = getelementptr inbounds [512 x i8], [512 x i8]* %207, i32 0, i32 0
+  %209 = load %struct.FILE_POS*, %struct.FILE_POS** %8, align 8
+  %210 = call i8* @EchoFileLine(%struct.FILE_POS* %209)
+  %211 = getelementptr inbounds [512 x i8], [512 x i8]* %val, i32 0, i32 0
+  %212 = call i32 (i8*, i8*, ...) @sprintf(i8* %208, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str.13, i32 0, i32 0), i8* %210, i8* %211) #2
+  br label %213
+
+; <label>:213                                     ; preds = %196, %186
+  br label %217
+
+; <label>:214                                     ; preds = %180
+  %215 = load %struct.FILE_POS*, %struct.FILE_POS** %8, align 8
+  %216 = call i8* (i32, i32, i8*, i32, %struct.FILE_POS*, ...) @Error(i32 28, i32 6, i8* getelementptr inbounds ([24 x i8], [24 x i8]* @.str.14, i32 0, i32 0), i32 1, %struct.FILE_POS* %215)
+  br label %217
+
+; <label>:217                                     ; preds = %214, %213
+  br label %218
+
+; <label>:218                                     ; preds = %217, %179
+  store i32 1, i32* @error_seen, align 4
+  br label %222
+
+; <label>:219                                     ; preds = %30
+  %220 = load %struct.FILE_POS*, %struct.FILE_POS** @no_fpos, align 8
+  %221 = call i8* (i32, i32, i8*, i32, %struct.FILE_POS*, ...) @Error(i32 1, i32 2, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @.str.4, i32 0, i32 0), i32 0, %struct.FILE_POS* %220, i8* getelementptr inbounds ([26 x i8], [26 x i8]* @.str.15, i32 0, i32 0))
+  br label %222
+
+; <label>:222                                     ; preds = %219, %218
+  %223 = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %ap, i32 0, i32 0
+  %224 = bitcast %struct.__va_list_tag* %223 to i8*
+  call void @llvm.va_end(i8* %224)
+  ret i8* null
+}
+
+declare %struct._IO_FILE* @fopen(i8*, i8*) #1
+
+; Function Attrs: nounwind uwtable
+define i32 @ErrorSeen() #0 {
+  %1 = load i32, i32* @error_seen, align 4
+  ret i32 %1
+}
+
+; Function Attrs: nounwind uwtable
+define void @EnterErrorBlock(i32 %ok_to_print) #0 {
+  %1 = alloca i32, align 4
+  store i32 %ok_to_print, i32* %1, align 4
+  %2 = load i32, i32* @block_top, align 4
+  %3 = icmp slt i32 %2, 20
+  br i1 %3, label %4, label %15
+
+; <label>:4                                       ; preds = %0
+  %5 = load i32, i32* %1, align 4
+  %6 = load i32, i32* @block_top, align 4
+  %7 = sext i32 %6 to i64
+  %8 = getelementptr inbounds [20 x i32], [20 x i32]* @print_block, i32 0, i64 %7
+  store i32 %5, i32* %8, align 4
+  %9 = load i32, i32* @mess_top, align 4
+  %10 = load i32, i32* @block_top, align 4
+  %11 = sext i32 %10 to i64
+  %12 = getelementptr inbounds [20 x i32], [20 x i32]* @start_block, i32 0, i64 %11
+  store i32 %9, i32* %12, align 4
+  %13 = load i32, i32* @block_top, align 4
+  %14 = add nsw i32 %13, 1
+  store i32 %14, i32* @block_top, align 4
+  br label %18
+
+; <label>:15                                      ; preds = %0
+  %16 = load %struct.FILE_POS*, %struct.FILE_POS** @no_fpos, align 8
+  %17 = call i8* (i32, i32, i8*, i32, %struct.FILE_POS*, ...) @Error(i32 28, i32 3, i8* getelementptr inbounds ([34 x i8], [34 x i8]* @.str.3, i32 0, i32 0), i32 1, %struct.FILE_POS* %16)
+  br label %18
+
+; <label>:18                                      ; preds = %15, %4
+  ret void
+}
+
+; Function Attrs: nounwind uwtable
+define void @LeaveErrorBlock(i32 %commit) #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %i = alloca i32, align 4
+  store i32 %commit, i32* %2, align 4
+  %3 = load i32, i32* @block_top, align 4
+  %4 = icmp sgt i32 %3, 0
+  br i1 %4, label %8, label %5
+
+; <label>:5                                       ; preds = %0
+  %6 = load %struct.FILE_POS*, %struct.FILE_POS** @no_fpos, align 8
+  %7 = call i8* (i32, i32, i8*, i32, %struct.FILE_POS*, ...) @Error(i32 1, i32 2, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @.str.4, i32 0, i32 0), i32 0, %struct.FILE_POS* %6, i8* getelementptr inbounds ([46 x i8], [46 x i8]* @.str.5, i32 0, i32 0))
+  br label %8
+
+; <label>:8                                       ; preds = %5, %0
+  %9 = load i32, i32* %2, align 4
+  %10 = icmp ne i32 %9, 0
+  br i1 %10, label %21, label %11
+
+; <label>:11                                      ; preds = %8
+  %12 = load i32, i32* @block_top, align 4
+  %13 = sub nsw i32 %12, 1
+  %14 = sext i32 %13 to i64
+  %15 = getelementptr inbounds [20 x i32], [20 x i32]* @print_block, i32 0, i64 %14
+  %16 = load i32, i32* %15, align 4
+  %17 = icmp ne i32 %16, 0
+  br i1 %17, label %18, label %21
+
+; <label>:18                                      ; preds = %11
+  %19 = load %struct.FILE_POS*, %struct.FILE_POS** @no_fpos, align 8
+  %20 = call i8* (i32, i32, i8*, i32, %struct.FILE_POS*, ...) @Error(i32 1, i32 2, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @.str.4, i32 0, i32 0), i32 0, %struct.FILE_POS* %19, i8* getelementptr inbounds ([25 x i8], [25 x i8]* @.str.6, i32 0, i32 0))
+  br label %21
+
+; <label>:21                                      ; preds = %18, %11, %8
+  %22 = load %struct._IO_FILE*, %struct._IO_FILE** @fp, align 8
+  %23 = icmp eq %struct._IO_FILE* %22, null
+  br i1 %23, label %24, label %26
+
+; <label>:24                                      ; preds = %21
+  %25 = load %struct._IO_FILE*, %struct._IO_FILE** @stderr, align 8
+  store %struct._IO_FILE* %25, %struct._IO_FILE** @fp, align 8
+  br label %26
+
+; <label>:26                                      ; preds = %24, %21
+  %27 = load i32, i32* %2, align 4
+  %28 = icmp ne i32 %27, 0
+  br i1 %28, label %29, label %77
+
+; <label>:29                                      ; preds = %26
+  %30 = load i32, i32* @block_top, align 4
+  %31 = sub nsw i32 %30, 1
+  %32 = sext i32 %31 to i64
+  %33 = getelementptr inbounds [20 x i32], [20 x i32]* @start_block, i32 0, i64 %32
+  %34 = load i32, i32* %33, align 4
+  store i32 %34, i32* %i, align 4
+  br label %35
+
+; <label>:35                                      ; preds = %73, %29
+  %36 = load i32, i32* %i, align 4
+  %37 = load i32, i32* @mess_top, align 4
+  %38 = icmp slt i32 %36, %37
+  br i1 %38, label %39, label %76
+
+; <label>:39                                      ; preds = %35
+  %40 = load i32, i32* @AltErrorFormat, align 4
+  %41 = icmp ne i32 %40, 0
+  br i1 %41, label %42, label %49
+
+; <label>:42                                      ; preds = %39
+  %43 = load i32, i32* %i, align 4
+  %44 = sext i32 %43 to i64
+  %45 = getelementptr inbounds [20 x [512 x i8]], [20 x [512 x i8]]* @message, i32 0, i64 %44
+  %46 = getelementptr inbounds [512 x i8], [512 x i8]* %45, i32 0, i32 0
+  %47 = load %struct._IO_FILE*, %struct._IO_FILE** @fp, align 8
+  %48 = call i32 @fputs(i8* %46, %struct._IO_FILE* %47)
+  br label %72
+
+; <label>:49                                      ; preds = %39
+  %50 = load i32, i32* %i, align 4
+  %51 = sext i32 %50 to i64
+  %52 = getelementptr inbounds [20 x i32], [20 x i32]* @message_fnum, i32 0, i64 %51
+  %53 = load i32, i32* %52, align 4
+  %54 = bitcast i32* %1 to i8*
+  call void @llvm.lifetime.start(i64 4, i8* %54)
+  store i32 %53, i32* %1, align 4
+  %55 = load i32, i32* %1, align 4
+  %56 = load i32, i32* @PrintFileBanner.CurrentFileNum, align 4
+  %57 = icmp ne i32 %55, %56
+  br i1 %57, label %58, label %PrintFileBanner.exit
+
+; <label>:58                                      ; preds = %49
+  %59 = load %struct._IO_FILE*, %struct._IO_FILE** @fp, align 8
+  %60 = load i32, i32* %1, align 4
+  %61 = trunc i32 %60 to i16
+  %62 = call i8* @EchoFileSource(i16 zeroext %61) #2
+  %63 = call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %59, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.16, i32 0, i32 0), i8* %62) #2
+  %64 = load i32, i32* %1, align 4
+  store i32 %64, i32* @PrintFileBanner.CurrentFileNum, align 4
+  br label %PrintFileBanner.exit
+
+PrintFileBanner.exit:                             ; preds = %49, %58
+  %65 = bitcast i32* %1 to i8*
+  call void @llvm.lifetime.end(i64 4, i8* %65)
+  %66 = load i32, i32* %i, align 4
+  %67 = sext i32 %66 to i64
+  %68 = getelementptr inbounds [20 x [512 x i8]], [20 x [512 x i8]]* @message, i32 0, i64 %67
+  %69 = getelementptr inbounds [512 x i8], [512 x i8]* %68, i32 0, i32 0
+  %70 = load %struct._IO_FILE*, %struct._IO_FILE** @fp, align 8
+  %71 = call i32 @fputs(i8* %69, %struct._IO_FILE* %70)
+  br label %72
+
+; <label>:72                                      ; preds = %PrintFileBanner.exit, %42
+  br label %73
+
+; <label>:73                                      ; preds = %72
+  %74 = load i32, i32* %i, align 4
+  %75 = add nsw i32 %74, 1
+  store i32 %75, i32* %i, align 4
+  br label %35
+
+; <label>:76                                      ; preds = %35
+  br label %77
+
+; <label>:77                                      ; preds = %76, %26
+  %78 = load i32, i32* @block_top, align 4
+  %79 = add nsw i32 %78, -1
+  store i32 %79, i32* @block_top, align 4
+  %80 = load i32, i32* @block_top, align 4
+  %81 = sext i32 %80 to i64
+  %82 = getelementptr inbounds [20 x i32], [20 x i32]* @start_block, i32 0, i64 %81
+  %83 = load i32, i32* %82, align 4
+  store i32 %83, i32* @mess_top, align 4
+  ret void
+}
+
+declare i32 @fputs(i8*, %struct._IO_FILE*) #1
+
+; Function Attrs: nounwind uwtable
+define void @CheckErrorBlocks() #0 {
+  %1 = load i32, i32* @block_top, align 4
+  %2 = icmp eq i32 %1, 0
+  br i1 %2, label %6, label %3
+
+; <label>:3                                       ; preds = %0
+  %4 = load %struct.FILE_POS*, %struct.FILE_POS** @no_fpos, align 8
+  %5 = call i8* (i32, i32, i8*, i32, %struct.FILE_POS*, ...) @Error(i32 1, i32 2, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @.str.4, i32 0, i32 0), i32 0, %struct.FILE_POS* %4, i8* getelementptr inbounds ([34 x i8], [34 x i8]* @.str.7, i32 0, i32 0))
+  br label %6
+
+; <label>:6                                       ; preds = %3, %0
+  ret void
+}
+
+; Function Attrs: nounwind
+declare void @llvm.va_start(i8*) #2
+
+; Function Attrs: nounwind
+declare i32 @vsprintf(i8*, i8*, %struct.__va_list_tag*) #3
+
+; Function Attrs: nounwind
+declare i8* @catgets(i8*, i32, i32, i8*) #3
+
+declare i32 @fprintf(%struct._IO_FILE*, i8*, ...) #1
+
+declare i8* @EchoAltFilePos(%struct.FILE_POS*) #1
+
+declare i8* @EchoFileLine(%struct.FILE_POS*) #1
+
+; Function Attrs: noreturn nounwind
+declare void @exit(i32) #4
+
+; Function Attrs: nounwind
+declare i32 @sprintf(i8*, i8*, ...) #3
+
+; Function Attrs: nounwind
+declare void @llvm.va_end(i8*) #2
+
+declare i8* @EchoFileSource(i16 zeroext) #1
+
+; Function Attrs: nounwind
+declare void @llvm.lifetime.start(i64, i8* nocapture) #2
+
+; Function Attrs: nounwind
+declare void @llvm.lifetime.end(i64, i8* nocapture) #2
+
+attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { nounwind }
+attributes #3 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #4 = { noreturn nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #5 = { noreturn nounwind }
+
+!llvm.ident = !{!0}
+
+!0 = !{!"Ubuntu clang version 3.7.0-2ubuntu1 (tags/RELEASE_370/final) (based on LLVM 3.7.0)"}

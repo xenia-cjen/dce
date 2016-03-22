@@ -36,12 +36,15 @@ class MyDCE : public FunctionPass {
 public: 
     static char ID;  
     MyDCE() : FunctionPass(ID) {} 
+    ~MyDCE(); 
     bool runOnFunction(Function &F) override; 
 
 protected: 
     bool MyDCEInstruction(Instruction *inst, 
                           InstSet &work_list, 
                           const TargetLibraryInfo *tli); 
+    static size_t DCEEliminated; 
+    static size_t DCEInst; 
                           
 }; 
 

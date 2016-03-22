@@ -28,7 +28,10 @@ using namespace llvm;
 
 typedef queue<Instruction *> InstQueue;  
 
+size_t MyDCE::DCEInst = 0; 
+size_t MyDCE::DCEEliminated = 0; 
 char MyDCE::ID = 0; 
+
 static RegisterPass<MyDCE> X("MyDCE", "My DCE Pass", false, false); 
 
 bool MyDCE:: MyDCEInstruction(Instruction *inst, 
@@ -59,6 +62,8 @@ bool MyDCE::runOnFunction(Function &F) {
     for (auto ii=inst_begin(F); ii!=inst_end(F); ++ii) 
         work_list.insert(&*ii); 
 
+    DCEInst+=work_list.size(); 
+
     bool made_change = false; 
     InstQueue dead_inst_list; 
     while (!work_list.empty()) {
@@ -71,8 +76,7 @@ bool MyDCE::runOnFunction(Function &F) {
             made_change = true; 
     }
 
-    errs() << "Number of inst(s) removed: "; 
-    errs() << dead_inst_list.size() << ". \n"; 
+    DCEEliminated += dead_inst_list.size(); 
 
     while (!dead_inst_list.empty()) { 
         dead_inst_list.front()->eraseFromParent(); 
@@ -82,3 +86,8 @@ bool MyDCE::runOnFunction(Function &F) {
     return made_change; 
 }
 
+MyDCE::~MyDCE() {
+    errs() << "Total number of inst(s) removed: "; 
+    errs() << DCEEliminated << " out of "; 
+    errs() << DCEInst << ". \n"; 
+}

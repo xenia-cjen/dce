@@ -312,7 +312,8 @@ LD	= gcc -static
 RCOPY	= cp -r
 
 COPTS	= -w -emit-llvm 
-OPTOPTS = -load ../../build/dce/libMyDCE.so -MyDCE 
+OPTOPTS = -inline
+DCEOPTS = -load ../../build/dce/libMyDCE.so -MyDCE 
 #OPTOPTS = -stats -O3
 LLVMOPTS=
 ASOPTS  = 
@@ -351,6 +352,7 @@ CFLAGS	= -DOS_UNIX=$(OSUNIX)					\
 SRCS   := $(wildcard $(SRCDIR)/z*.c)
 OBJS    = $(SRCS:.c=.o)
 SS		= $(SRCS:.c=.s)
+DCE_OPT	= $(SRCS:.c=.dce)
 LL_OPT  = $(SRCS:.c=.opt)
 LL 	    = $(SRCS:.c=.ll)
 
@@ -361,11 +363,14 @@ lout:	$(OBJS)
 $(OBJS): %.o: %.s
 	@$(AS) $(ASOPTS) -c $< -o $@
 
-$(SS): %.s: %.opt 
+$(SS): %.s: %.dce 
 	@$(LLVM) $(LLVMOPTS) $< -o $@ 
 
+$(DCE_OPT): %.dce: %.opt 
+	$(OPT) $(DCEOPTS) -S $< -o $@
+
 $(LL_OPT): %.opt: %.ll 
-	$(OPT) $(OPTOPTS) -S $< -o $@
+	@$(OPT) $(OPTOPTS) -S $< -o $@
 
 $(LL): %.ll: %.c 
 	@$(CC) $(COPTS) $(CFLAGS) -S $< -o $@
@@ -470,6 +475,6 @@ uninstall:
 	-rm -f  $(MANDIR)/lout.1 $(MANDIR)/prg2lout.1
 
 clean:	
-	-rm -f lout prg2lout *.o *.ll *.opt *.s
+	-rm -f lout prg2lout *.o *.ll *.opt *.s *.dce
 
 restart:	clean uninstall
